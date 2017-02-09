@@ -216,7 +216,7 @@ public:
   // Get a copy of the compositor-side APZ test data for our layers ID.
   void GetCompositorSideAPZTestData(APZTestData* aData) const;
 
-  void SetTransactionIdAllocator(TransactionIdAllocator* aAllocator) { mTransactionIdAllocator = aAllocator; }
+  void SetTransactionIdAllocator(TransactionIdAllocator* aAllocator);
 
   float RequestProperty(const nsAString& aProperty) override;
 
