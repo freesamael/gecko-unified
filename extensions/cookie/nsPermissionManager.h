@@ -23,6 +23,10 @@ namespace mozilla {
 class OriginAttributesPattern;
 }
 
+namespace IPC {
+struct Permission;
+}
+
 class nsIPermission;
 class mozIStorageConnection;
 class mozIStorageAsyncStatement;
@@ -197,6 +201,8 @@ public:
                        NotifyOperationType aNotifyOperation,
                        DBOperationType aDBOperation,
                        const bool aIgnoreSessionPermissions = false);
+
+  nsresult ReplyFetchPermissions(nsTArray<IPC::Permission>& aPermissions);
 
   /**
    * Initialize the "clear-origin-attributes-data" observing.

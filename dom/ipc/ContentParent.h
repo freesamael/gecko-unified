@@ -905,7 +905,7 @@ private:
   virtual mozilla::ipc::IPCResult RecvReadDataStorageArray(const nsString& aFilename,
                                                            InfallibleTArray<DataStorageItem>* aValues) override;
 
-  virtual mozilla::ipc::IPCResult RecvReadPermissions(InfallibleTArray<IPC::Permission>* aPermissions) override;
+  virtual mozilla::ipc::IPCResult RecvReadPermissions() override;
 
   virtual mozilla::ipc::IPCResult RecvSetClipboard(const IPCDataTransfer& aDataTransfer,
                                                    const bool& aIsPrivateData,

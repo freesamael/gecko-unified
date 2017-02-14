@@ -683,6 +683,8 @@ child:
 
     async FileCreationResponse(nsID aID, FileCreationResult aResult);
 
+    async ReplyReadPermissions(Permission[] permissions);
+
 parent:
     async InitBackground(Endpoint<PBackgroundParent> aEndpoint);
 
@@ -877,7 +879,7 @@ parent:
                       nsCString category);
 
     // nsIPermissionManager messages
-    sync ReadPermissions() returns (Permission[] permissions);
+    async ReadPermissions();
 
     // Places the items within dataTransfer on the clipboard.
     async SetClipboard(IPCDataTransfer aDataTransfer,

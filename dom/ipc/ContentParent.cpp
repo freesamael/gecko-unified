@@ -2299,9 +2299,10 @@ ContentParent::RecvReadDataStorageArray(const nsString& aFilename,
 }
 
 mozilla::ipc::IPCResult
-ContentParent::RecvReadPermissions(InfallibleTArray<IPC::Permission>* aPermissions)
+ContentParent::RecvReadPermissions()
 {
 #ifdef MOZ_PERMISSIONS
+  nsTArray<IPC::Permission> permissions;
   nsCOMPtr<nsIPermissionManager> permissionManagerIface =
     services::GetPermissionManager();
   nsPermissionManager* permissionManager =
@@ -2312,12 +2313,10 @@ ContentParent::RecvReadPermissions(InfallibleTArray<IPC::Permission>* aPermissio
   nsCOMPtr<nsISimpleEnumerator> enumerator;
   DebugOnly<nsresult> rv = permissionManager->GetEnumerator(getter_AddRefs(enumerator));
   MOZ_ASSERT(NS_SUCCEEDED(rv), "Could not get enumerator!");
-  while(1) {
-    bool hasMore;
-    enumerator->HasMoreElements(&hasMore);
-    if (!hasMore)
-      break;
 
+  bool hasMore;
+  enumerator->HasMoreElements(&hasMore);
+  while(hasMore) {
     nsCOMPtr<nsISupports> supp;
     enumerator->GetNext(getter_AddRefs(supp));
     nsCOMPtr<nsIPermission> perm = do_QueryInterface(supp);
@@ -2337,9 +2336,13 @@ ContentParent::RecvReadPermissions(InfallibleTArray<IPC::Permission>* aPermissio
     int64_t expireTime;
     perm->GetExpireTime(&expireTime);
 
-    aPermissions->AppendElement(IPC::Permission(origin, type,
+    permissions.AppendElement(IPC::Permission(origin, type,
                                                 capability, expireType,
                                                 expireTime));
+  }
+
+  if (!permissions.IsEmpty()) {
+    Unused << SendReplyReadPermissions(permissions);
   }
 
   // Ask for future changes

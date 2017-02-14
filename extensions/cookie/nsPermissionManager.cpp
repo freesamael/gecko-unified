@@ -2911,14 +2911,20 @@ nsPermissionManager::UpdateExpireTime(nsIPrincipal* aPrincipal,
 }
 
 nsresult
-nsPermissionManager::FetchPermissions() {
+nsPermissionManager::FetchPermissions()
+{
   MOZ_ASSERT(IsChildProcess(), "FetchPermissions can only be invoked in child process");
   // Get the permissions from the parent process
-  InfallibleTArray<IPC::Permission> perms;
-  ChildProcess()->SendReadPermissions(&perms);
+  ChildProcess()->SendReadPermissions();
+  return NS_OK;
+}
 
-  for (uint32_t i = 0; i < perms.Length(); i++) {
-    const IPC::Permission &perm = perms[i];
+nsresult
+nsPermissionManager::ReplyFetchPermissions(nsTArray<IPC::Permission>& aPermissions)
+{
+  MOZ_ASSERT(IsChildProcess(), "ReplyFetchPermissions can only be invoked in child process");
+  for (uint32_t i = 0; i < aPermissions.Length(); i++) {
+    const IPC::Permission &perm = aPermissions[i];
 
     nsCOMPtr<nsIPrincipal> principal;
     nsresult rv = GetPrincipalFromOrigin(perm.origin, getter_AddRefs(principal));

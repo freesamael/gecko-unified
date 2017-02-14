@@ -376,6 +376,8 @@ public:
 
   virtual mozilla::ipc::IPCResult RecvAddPermission(const IPC::Permission& permission) override;
 
+  virtual mozilla::ipc::IPCResult RecvReplyReadPermissions(InfallibleTArray<IPC::Permission>&& permission) override;
+
   virtual mozilla::ipc::IPCResult RecvFlushMemory(const nsString& reason) override;
 
   virtual mozilla::ipc::IPCResult RecvActivateA11y(const uint32_t& aMsaaID) override;
