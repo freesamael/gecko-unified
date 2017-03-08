@@ -101,7 +101,7 @@ list of valid flavors.
 # Try run will then put a download link for all log files
 # on tbpl.mozilla.org.
 
-MOZ_LOG = ""
+MOZ_LOG = "DOMLeak:5,nsDocShell:5,nsDocShellLeak:5,DocumentLeak:5"
 
 #####################
 # Test log handling #
