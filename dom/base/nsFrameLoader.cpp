@@ -2400,7 +2400,7 @@ nsFrameLoader::MaybeCreateDocShell()
 
     // Set the opener window if we have one provided here
     if (mOpener) {
-      win_private->SetOpenerWindow(mOpener, true);
+      win_private->SetOpenerWindow(mOpener);
       mOpener = nullptr;
     }
   }

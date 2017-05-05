@@ -1561,9 +1561,6 @@ nsGlobalWindow::nsGlobalWindow(nsGlobalWindow *aOuterWindow)
     mSerial(0),
     mIdleRequestCallbackCounter(1),
     mIdleRequestExecutor(nullptr),
-#ifdef DEBUG
-    mSetOpenerWindowCalled(false),
-#endif
 #ifdef MOZ_B2G
     mNetworkUploadObserverEnabled(false),
     mNetworkDownloadObserverEnabled(false),
@@ -3581,24 +3578,28 @@ nsGlobalWindow::DetachFromDocShell()
 }
 
 void
-nsGlobalWindow::SetOpenerWindow(nsPIDOMWindowOuter* aOpener,
-                                bool aOriginalOpener)
+nsGlobalWindow::SetOpenerWindow(nsPIDOMWindowOuter* aOpener)
 {
-  FORWARD_TO_OUTER_VOID(SetOpenerWindow, (aOpener, aOriginalOpener));
+  SetOpenerWindowInternal(aOpener, /* aForceOverride */ false);
+}
+
+void
+nsGlobalWindow::SetOpenerWindowInternal(nsPIDOMWindowOuter* aOpener,
+                                        bool aForceOverride)
+{
+  FORWARD_TO_OUTER_VOID(SetOpenerWindowInternal, (aOpener, aForceOverride));
 
   nsWeakPtr opener = do_GetWeakReference(aOpener);
+  NS_ASSERTION(opener || !aOpener, "Opener must support weak references!");
   if (opener == mOpener) {
     return;
   }
 
-  NS_ASSERTION(!aOriginalOpener || !mSetOpenerWindowCalled,
-               "aOriginalOpener is true, but not first call to "
-               "SetOpenerWindow!");
-  NS_ASSERTION(aOpener || !aOriginalOpener,
-               "Shouldn't set mHadOriginalOpener if aOpener is null");
+  MOZ_ASSERT(!aOpener || aForceOverride || !mHadOriginalOpener,
+             "Trying to set opener to a non-null value while aForceOverride "
+             "is false and not first call to SetOpenerWindow!");
 
   mOpener = opener.forget();
-  NS_ASSERTION(mOpener || !aOpener, "Opener must support weak references!");
 
   // Check that the js visible opener matches! We currently don't depend on this
   // being true outside of nightly, so we disable the assertion in optimized
@@ -3610,17 +3611,16 @@ nsGlobalWindow::SetOpenerWindow(nsPIDOMWindowOuter* aOpener,
   MOZ_DIAGNOSTIC_ASSERT(!contentOpener || !mTabGroup ||
     mTabGroup == Cast(contentOpener)->mTabGroup);
 
-  if (aOriginalOpener) {
-    MOZ_ASSERT(!mHadOriginalOpener,
-               "Probably too late to call ComputeIsSecureContext again");
+  if (!mHadOriginalOpener) {
+    // Whether mOpener is set to a non-null value or not, we consider the
+    // opener has been set and prevent subsequent calls to change it to any
+    // non-null values (unless aForceOverride is set).
     mHadOriginalOpener = true;
-    mOriginalOpenerWasSecureContext =
-      aOpener->GetCurrentInnerWindow()->IsSecureContext();
+    if (aOpener) {
+      mOriginalOpenerWasSecureContext =
+        aOpener->GetCurrentInnerWindow()->IsSecureContext();
+    }
   }
-
-#ifdef DEBUG
-  mSetOpenerWindowCalled = true;
-#endif
 }
 
 static
@@ -5432,7 +5432,7 @@ nsGlobalWindow::SetOpener(JSContext* aCx, JS::Handle<JS::Value> aOpener,
     outer = win->GetOuterWindow();
   }
 
-  SetOpenerWindow(outer, false);
+  SetOpenerWindowInternal(outer, /* aForceOverride */ true);
 }
 
 void

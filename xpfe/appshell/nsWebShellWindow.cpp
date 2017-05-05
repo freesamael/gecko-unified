@@ -221,7 +221,7 @@ nsresult nsWebShellWindow::Initialize(nsIXULWindow* aParent,
   if (aOpenerWindow) {
     nsPIDOMWindowOuter* window = mDocShell->GetWindow();
     MOZ_ASSERT(window);
-    window->SetOpenerWindow(nsPIDOMWindowOuter::From(aOpenerWindow), true);
+    window->SetOpenerWindow(nsPIDOMWindowOuter::From(aOpenerWindow));
   }
 
   // Eagerly create an about:blank content viewer with the right principal here,

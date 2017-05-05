@@ -304,14 +304,10 @@ public:
                                   bool aForceReuseInnerWindow) = 0;
 
   /**
-   * Set the opener window.  aOriginalOpener is true if and only if this is the
-   * original opener for the window.  That is, it can only be true at most once
-   * during the life cycle of a window, and then only the first time
-   * SetOpenerWindow is called.  It might never be true, of course, if the
-   * window does not have an opener when it's created.
+   * Set the opener window.  It can only be set to a non-null value at the first
+   * time SetOpenerWindow is called.
    */
-  virtual void SetOpenerWindow(nsPIDOMWindowOuter* aOpener,
-                               bool aOriginalOpener) = 0;
+  virtual void SetOpenerWindow(nsPIDOMWindowOuter* aOpener) = 0;
 
   /**
    * Ensure the size and position of this window are up-to-date by doing

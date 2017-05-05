@@ -893,10 +893,10 @@ ContentChild::ProvideWindowCommon(TabChild* aTabOpener,
   // they can poke at the document and cause the nsDocument to be created before
   // the openerwindow
   nsCOMPtr<mozIDOMWindowProxy> windowProxy = do_GetInterface(newChild->WebNavigation());
-  if (!aForceNoOpener && windowProxy && aParent) {
+  if (!aForceNoOpener && windowProxy && aParent && *aWindowIsNew) {
     nsPIDOMWindowOuter* outer = nsPIDOMWindowOuter::From(windowProxy);
     nsPIDOMWindowOuter* parent = nsPIDOMWindowOuter::From(aParent);
-    outer->SetOpenerWindow(parent, *aWindowIsNew);
+    outer->SetOpenerWindow(parent);
   }
 
   // Unfortunately we don't get a window unless we've shown the frame.  That's

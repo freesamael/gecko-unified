@@ -420,8 +420,7 @@ public:
   // Outer windows only.
   void DispatchDOMWindowCreated();
 
-  virtual void SetOpenerWindow(nsPIDOMWindowOuter* aOpener,
-                               bool aOriginalOpener) override;
+  virtual void SetOpenerWindow(nsPIDOMWindowOuter* aOpener) override;
 
   // Outer windows only.
   virtual void EnsureSizeAndPositionUpToDate() override;
@@ -1783,6 +1782,9 @@ private:
 
   void DisconnectEventTargetObjects();
 
+  // Set the opener window.  It can only be set to a non-null value at the first
+  // call unless aForceOverride is true.
+  void SetOpenerWindowInternal(nsPIDOMWindowOuter* aOpener, bool aForceOverride);
 
   enum class SecureContextFlags {
     eDefault,
@@ -1974,7 +1976,6 @@ protected:
   RefPtr<IdleRequestExecutor> mIdleRequestExecutor;
 
 #ifdef DEBUG
-  bool mSetOpenerWindowCalled;
   nsCOMPtr<nsIURI> mLastOpenedURI;
 #endif
 
