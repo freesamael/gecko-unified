@@ -449,7 +449,6 @@ public:
                                                    InfallibleTArray<CpowEntry>&& aCpows,
                                                    const IPC::Principal& aPrincipal,
                                                    const ClonedMessageData& aData) override;
-
   virtual mozilla::ipc::IPCResult
   RecvSwappedWithOtherRemoteLoader(const IPCTabContext& aContext) override;
 
