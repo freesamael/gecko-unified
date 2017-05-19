@@ -892,8 +892,9 @@ ContentChild::ProvideWindowCommon(TabChild* aTabOpener,
     nsCOMPtr<nsILoadContext> context = do_QueryInterface(openerShell);
     showInfo = ShowInfo(EmptyString(), false,
                         context->UsePrivateBrowsing(), true, false,
-                        aTabOpener->mDPI, aTabOpener->mRounding,
-                        aTabOpener->mDefaultScale);
+                        aTabOpener->WebWidget()->GetDPI(),
+                        aTabOpener->WebWidget()->RoundsWidgetCoordinatesTo(),
+                        aTabOpener->WebWidget()->GetDefaultScale().scale);
   }
 
   // Set the opener window for this window before we start loading the document

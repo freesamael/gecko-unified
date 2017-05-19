@@ -1145,42 +1145,18 @@ PuppetWidget::NeedsPaint()
 float
 PuppetWidget::GetDPI()
 {
-  if (mDPI < 0) {
-    if (mTabChild) {
-      mTabChild->GetDPI(&mDPI);
-    } else {
-      mDPI = 96.0;
-    }
-  }
-
   return mDPI;
 }
 
 double
 PuppetWidget::GetDefaultScaleInternal()
 {
-  if (mDefaultScale < 0) {
-    if (mTabChild) {
-      mTabChild->GetDefaultScale(&mDefaultScale);
-    } else {
-      mDefaultScale = 1;
-    }
-  }
-
   return mDefaultScale;
 }
 
 int32_t
 PuppetWidget::RoundsWidgetCoordinatesTo()
 {
-  if (mRounding < 0) {
-    if (mTabChild) {
-      mTabChild->GetWidgetRounding(&mRounding);
-    } else {
-      mRounding = 1;
-    }
-  }
-
   return mRounding;
 }
 
