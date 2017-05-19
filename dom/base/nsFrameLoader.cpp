@@ -2713,6 +2713,11 @@ nsFrameLoader::UpdatePositionAndSize(nsSubDocumentFrame *aIFrame)
   if (IsRemoteFrame()) {
     if (mRemoteBrowser) {
       ScreenIntSize size = aIFrame->GetSubdocumentSize();
+      // If we were not able to show remote frame before, we should probably
+      // retry now to send correct showInfo.
+      if (!mRemoteBrowserShown) {
+        ShowRemoteFrame(size, aIFrame);
+      }
       nsIntRect dimensions;
       NS_ENSURE_SUCCESS(GetWindowDimensions(dimensions), NS_ERROR_FAILURE);
       mLazySize = size;
