@@ -7,13 +7,23 @@
 // Test handling errors in CacheStorage
 
 add_task(function* () {
-  yield openTabAndSetupStorage(MAIN_DOMAIN + "storage-cache-error.html");
+  // Open the URL in a private browsing window.
+  let win = yield BrowserTestUtils.openNewBrowserWindow({ private: true });
+  let tab = win.gBrowser.selectedBrowser;
+  tab.loadURI(MAIN_DOMAIN + "storage-cache-error.html");
+  yield BrowserTestUtils.browserLoaded(tab);
 
-  const cacheItemId = ["Cache", "javascript:parent.frameContent"];
+  // On enumerating cache storages, CacheStorage::Keys would throw a
+  // DOM security exception. We'd like to verify storage panel still work in
+  // this case.
+  yield openStoragePanel(null, win.gBrowser);
+
+  const cacheItemId = ["Cache", "http://test2.example.org"];
 
   yield selectTreeItem(cacheItemId);
   ok(gUI.tree.isSelected(cacheItemId),
     `The item ${cacheItemId.join(" > ")} is present in the tree`);
 
+  yield BrowserTestUtils.closeWindow(win);
   yield finishTests();
 });

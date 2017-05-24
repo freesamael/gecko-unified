@@ -135,12 +135,13 @@ function* openTabAndSetupStorage(url, options = {}) {
  *
  * @param cb {Function} Optional callback, if you don't want to use the returned
  *                      promise
+ * @param tabbrowser {Object} tabbrowser to use. Default to gBrowser.
  *
  * @return {Promise} a promise that resolves when the storage inspector is ready
  */
-var openStoragePanel = Task.async(function* (cb) {
+var openStoragePanel = Task.async(function* (cb, tabbrowser = gBrowser) {
   info("Opening the storage inspector");
-  let target = TargetFactory.forTab(gBrowser.selectedTab);
+  let target = TargetFactory.forTab(tabbrowser.selectedTab);
 
   let storage, toolbox;
 

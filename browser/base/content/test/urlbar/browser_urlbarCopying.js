@@ -170,17 +170,15 @@ var tests = [
     copyExpected: "http://example.com/%20%20%20"
   },
 
-  // data: and javsacript: URIs shouldn't be encoded
+  // Loading of javascript: URI results in previous URI.
   {
     loadURL: "javascript:('%C3%A9%20%25%50')",
-    expectedURL: "javascript:('%C3%A9 %25P')",
-    copyExpected: "javascript:('%C3%A9 %25P')"
-  },
-  {
-    copyVal: "<javascript:(>'%C3%A9 %25P')",
-    copyExpected: "javascript:("
+    expectedLoad: "http://example.com/%20%20%20",
+    expectedURL: "example.com/   ",
+    copyExpected: "http://example.com/%20%20%20"
   },
 
+  // data: URIs shouldn't be encoded
   {
     loadURL: "data:text/html,(%C3%A9%20%25%50)",
     expectedURL: "data:text/html,(%C3%A9 %25P)",
@@ -230,7 +228,9 @@ function runTest(testCase, cb) {
 
   if (testCase.loadURL) {
     info(`Loading : ${testCase.loadURL}\n`);
-    loadURL(testCase.loadURL, doCheck);
+    let expectedLoad = testCase.expectedLoad ?
+      testCase.expectedLoad : testCase.loadURL;
+    loadURL(testCase.loadURL, expectedLoad, doCheck);
   } else {
     if (testCase.setURL)
       gURLBar.value = testCase.setURL;
@@ -283,7 +283,7 @@ function testCopy(copyVal, targetValue, cb) {
   }, cb, cb);
 }
 
-function loadURL(aURL, aCB) {
+function loadURL(aURL, aExpectedLoad, aCB) {
   BrowserTestUtils.loadURI(gBrowser.selectedBrowser, aURL);
-  BrowserTestUtils.browserLoaded(gBrowser.selectedBrowser, false, aURL).then(aCB);
+  BrowserTestUtils.browserLoaded(gBrowser.selectedBrowser, false, aExpectedLoad).then(aCB);
 }
