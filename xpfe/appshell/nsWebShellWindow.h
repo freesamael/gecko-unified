@@ -13,6 +13,7 @@
 #include "nsXULWindow.h"
 #include "nsIWidgetListener.h"
 #include "nsITabParent.h"
+#include "nsIObserver.h"
 
 /* Forward declarations.... */
 class nsIURI;
@@ -25,7 +26,8 @@ class WebShellWindowTimerCallback;
 
 class nsWebShellWindow final : public nsXULWindow,
                                public nsIWebProgressListener,
-                               public nsIWidgetListener
+                               public nsIWidgetListener,
+                               public nsIObserver
 {
 public:
   explicit nsWebShellWindow(uint32_t aChromeFlags);
@@ -46,6 +48,7 @@ public:
 
   // nsIWebProgressListener
   NS_DECL_NSIWEBPROGRESSLISTENER
+  NS_DECL_NSIOBSERVER
 
   // nsIBaseWindow
   NS_IMETHOD Destroy() override;
@@ -67,7 +70,7 @@ public:
 
 protected:
   friend class mozilla::WebShellWindowTimerCallback;
-  
+
   virtual ~nsWebShellWindow();
 
   bool                     ExecuteCloseHandler();
@@ -78,6 +81,7 @@ protected:
 
   void        SetPersistenceTimer(uint32_t aDirtyFlags);
   void        FirePersistenceTimer();
+  void        CondWaitTest();
 };
 
 

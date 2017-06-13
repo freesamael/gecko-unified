@@ -531,6 +531,7 @@ ReentrantMonitor::Wait(PRIntervalTime aInterval)
 nsresult
 CondVar::Wait(PRIntervalTime aInterval)
 {
+  nsresult rv = NS_OK;
   AssertCurrentThreadOwnsMutex();
 
   // save mutex state and reset to empty
@@ -545,7 +546,7 @@ CondVar::Wait(PRIntervalTime aInterval)
   if (aInterval == PR_INTERVAL_NO_TIMEOUT) {
     mImpl.wait(*mLock);
   } else {
-    mImpl.wait_for(*mLock, TimeDuration::FromMilliseconds(double(aInterval)));
+    rv = mImpl.wait_for(*mLock, TimeDuration::FromMilliseconds(double(aInterval))) == detail::CVStatus::Timeout ? NS_ERROR_ABORT : NS_OK;
   }
 
   // restore saved state
@@ -553,7 +554,7 @@ CondVar::Wait(PRIntervalTime aInterval)
   mLock->mChainPrev = savedChainPrev;
   mLock->mOwningThread = savedOwningThread;
 
-  return NS_OK;
+  return rv;
 }
 
 #endif // ifdef DEBUG

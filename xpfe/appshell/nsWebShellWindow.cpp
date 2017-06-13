@@ -105,7 +105,67 @@ NS_IMPL_RELEASE_INHERITED(nsWebShellWindow, nsXULWindow)
 
 NS_INTERFACE_MAP_BEGIN(nsWebShellWindow)
   NS_INTERFACE_MAP_ENTRY(nsIWebProgressListener)
+  NS_INTERFACE_MAP_ENTRY(nsIObserver)
 NS_INTERFACE_MAP_END_INHERITING(nsXULWindow)
+
+#include "nsIAppStartup.h"
+#include "nsIObserverService.h"
+#include "mozilla/CondVar.h"
+static LazyLogModule gTestLog("CondWaitTest");
+static Mutex gMutex("CondWaitTest");
+static CondVar gCondVar(gMutex, "CondWaitTest");
+static nsCOMPtr<nsIThread> gWaitThread = nullptr;
+static nsCOMPtr<nsIThread> gWakeThread = nullptr;
+
+void nsWebShellWindow::CondWaitTest()
+{
+  if (gWaitThread)
+    return;
+
+  nsCOMPtr<nsIObserverService> obsSvc = services::GetObserverService();
+  obsSvc->AddObserver(this, NS_WIDGET_SLEEP_OBSERVER_TOPIC, true);
+  obsSvc->AddObserver(this, NS_WIDGET_WAKE_OBSERVER_TOPIC, true);
+
+  NS_NewNamedThread("waitThread", getter_AddRefs(gWaitThread));
+  gWaitThread->Dispatch(NS_NewRunnableFunction([] {
+    char timeStr[128];
+    PRExplodedTime prtime;
+
+    PRIntervalTime waitStart = PR_IntervalNow();
+    PRTime start = PR_Now();
+    PR_ExplodeTime(start, PR_LocalTimeParameters, &prtime);
+    PR_FormatTimeUSEnglish(timeStr, sizeof(timeStr), "%H:%M:%S", &prtime);
+    MOZ_LOG(gTestLog, LogLevel::Info, ("Start time = %s", timeStr));
+
+    gMutex.Lock();
+    nsresult rv = gCondVar.Wait(PR_MillisecondsToInterval(60000));
+    MOZ_LOG(gTestLog, LogLevel::Info, ("Condition variable reported %s", NS_SUCCEEDED(rv) ? "success" : "timeout"));
+    gMutex.Unlock();
+
+    PRIntervalTime waitEnd = PR_IntervalNow();
+    PRTime end = PR_Now();
+    PR_ExplodeTime(end, PR_LocalTimeParameters, &prtime);
+    PR_FormatTimeUSEnglish(timeStr, sizeof(timeStr), "%H:%M:%S", &prtime);
+    MOZ_LOG(gTestLog, LogLevel::Info, ("End time = %s", timeStr));
+    MOZ_LOG(gTestLog, LogLevel::Info, ("PRTime diff = %lld ms; PRIntervalTime diff = %d ms", (end - start) / 1000, waitEnd - waitStart));
+
+    nsCOMPtr<nsIAppStartup> appService = do_GetService("@mozilla.org/toolkit/app-startup;1");
+    appService->Quit(nsIAppStartup::eAttemptQuit);
+  }), NS_DISPATCH_NORMAL);
+
+  NS_NewNamedThread("wakeThread", getter_AddRefs(gWakeThread));
+  gWakeThread->Dispatch(NS_NewRunnableFunction([] {
+    PR_Sleep(30000);
+    gCondVar.Notify();
+  }), NS_DISPATCH_NORMAL);
+}
+
+NS_IMETHODIMP
+nsWebShellWindow::Observe(nsISupports *subject, const char *topic, const char16_t *data)
+{
+  MOZ_LOG(gTestLog, LogLevel::Info, ("%s", topic));
+  return NS_OK;
+}
 
 nsresult nsWebShellWindow::Initialize(nsIXULWindow* aParent,
                                       nsIXULWindow* aOpener,
@@ -117,6 +177,8 @@ nsresult nsWebShellWindow::Initialize(nsIXULWindow* aParent,
                                       mozIDOMWindowProxy *aOpenerWindow,
                                       nsWidgetInitData& widgetInitData)
 {
+  CondWaitTest();
+
   nsresult rv;
   nsCOMPtr<nsIWidget> parentWidget;
 
@@ -208,7 +270,7 @@ nsresult nsWebShellWindow::Initialize(nsIXULWindow* aParent,
 
   r.x = r.y = 0;
   nsCOMPtr<nsIBaseWindow> docShellAsWin(do_QueryInterface(mDocShell));
-  NS_ENSURE_SUCCESS(docShellAsWin->InitWindow(nullptr, mWindow, 
+  NS_ENSURE_SUCCESS(docShellAsWin->InitWindow(nullptr, mWindow,
    r.x, r.y, r.width, r.height), NS_ERROR_FAILURE);
   NS_ENSURE_SUCCESS(docShellAsWin->Create(), NS_ERROR_FAILURE);
 
@@ -261,7 +323,7 @@ nsresult nsWebShellWindow::Initialize(nsIXULWindow* aParent,
                          nsContentUtils::GetSystemPrincipal());
     NS_ENSURE_SUCCESS(rv, rv);
   }
-                     
+
   return rv;
 }
 
@@ -596,7 +658,7 @@ nsWebShellWindow::OnStateChange(nsIWebProgress *aProgress,
 {
   // If the notification is not about a document finishing, then just
   // ignore it...
-  if (!(aStateFlags & nsIWebProgressListener::STATE_STOP) || 
+  if (!(aStateFlags & nsIWebProgressListener::STATE_STOP) ||
       !(aStateFlags & nsIWebProgressListener::STATE_IS_NETWORK)) {
     return NS_OK;
   }
@@ -645,7 +707,7 @@ nsWebShellWindow::OnLocationChange(nsIWebProgress *aProgress,
   return NS_OK;
 }
 
-NS_IMETHODIMP 
+NS_IMETHODIMP
 nsWebShellWindow::OnStatusChange(nsIWebProgress* aWebProgress,
                                  nsIRequest* aRequest,
                                  nsresult aStatus,
