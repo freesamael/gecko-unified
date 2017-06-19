@@ -100,7 +100,9 @@ this.BrowserTestUtils = {
         url: options
       }
     }
+    dump("BrowserTestUtils.withNewTab: " + options.url + "\n");
     let tab = await BrowserTestUtils.openNewForegroundTab(options);
+    dump("BrowserTestUtils.withNewTab: openNewForegroundTab done\n");
     let originalWindow = tab.ownerGlobal;
     let result = await taskFn(tab.linkedBrowser);
     let finalWindow = tab.ownerGlobal;
@@ -196,7 +198,8 @@ this.BrowserTestUtils = {
       ];
 
       if (aWaitForLoad) {
-        promises.push(BrowserTestUtils.browserLoaded(tab.linkedBrowser));
+        promises.push(BrowserTestUtils.browserLoaded(tab.linkedBrowser)
+        .then(url => dump("BrowserTestUtils.browserLoaded: " + url + "\n")));
       }
       if (aWaitForStateStop) {
         promises.push(BrowserTestUtils.browserStopped(tab.linkedBrowser));
@@ -208,7 +211,10 @@ this.BrowserTestUtils = {
                                   PROCESSSELECTOR_CONTRACTID, null);
       }
     }
-    return Promise.all(promises).then(() => tab);
+    return Promise.all(promises).then(() => {
+             dump("openNewForegroundTab: done\n");
+             return tab;
+           });
   },
 
   /**
@@ -287,10 +293,14 @@ this.BrowserTestUtils = {
     return new Promise(resolve => {
       let mm = browser.ownerGlobal.messageManager;
       mm.addMessageListener("browser-test-utils:loadEvent", function onLoad(msg) {
+        dump("browser-test-utils:loadEvent\n");
         if (msg.target == browser && (!msg.data.subframe || includeSubFrames) &&
             isWanted(msg.data.url)) {
+          dump("browser-test-utils:loadEvent: " + msg.data.url + "\n");
           mm.removeMessageListener("browser-test-utils:loadEvent", onLoad);
           resolve(msg.data.url);
+        } else {
+          dump("browser-test-utils:loadEvent (ignored): " + msg.data.url + "\n");
         }
       });
     });
