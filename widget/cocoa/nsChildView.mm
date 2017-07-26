@@ -36,7 +36,6 @@
 #include "nsThemeConstants.h"
 #include "nsIWidgetListener.h"
 #include "nsIPresShell.h"
-#include "nsIScreen.h"
 
 #include "nsDragService.h"
 #include "nsClipboard.h"
@@ -824,12 +823,12 @@ nsChildView::GetParent()
 float
 nsChildView::GetDPI()
 {
-  float dpi = 96.0;
-  nsCOMPtr<nsIScreen> screen = GetWidgetScreen();
-  if (screen) {
-    screen->GetDpi(&dpi);
+  NSWindow* window = [mView window];
+  if (window && [window isKindOfClass:[BaseWindow class]]) {
+    return [(BaseWindow*)window getDPI];
   }
-  return dpi;
+
+  return 96.0;
 }
 
 void
