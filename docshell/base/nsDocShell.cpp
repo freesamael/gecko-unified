@@ -12553,6 +12553,7 @@ nsDocShell::AddToSessionHistory(nsIURI* aURI, nsIChannel* aChannel,
         shContainer->GetChildAt(i, getter_AddRefs(child));
         shContainer->RemoveChild(child);
       }
+      MOZ_CRASH("Crash It!");
       entry->AbandonBFCacheEntry();
     }
   }
