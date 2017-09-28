@@ -1394,10 +1394,8 @@ nsDocShell::LoadURI(nsIURI* aURI,
       // reference of this docshell before the loading starts, causing the
       // initial about:blank content viewer being created and mCurrentURI being
       // set. To handle this case we check if mCurrentURI is about:blank and
-      // currentSHEntry is null.
-      nsCOMPtr<nsISHEntry> currentChildEntry;
-      GetCurrentSHEntry(getter_AddRefs(currentChildEntry), &oshe);
-      if (!mCurrentURI || (NS_IsAboutBlank(mCurrentURI) && !currentChildEntry)) {
+      // mLSHE / mOSHE are both null.
+      if (!mCurrentURI || (!mLSHE && !mOSHE && NS_IsAboutBlank(mCurrentURI))) {
         // This is a newly created frame. Check for exception cases first.
         // By default the subframe will inherit the parent's loadType.
         if (shEntry && (parentLoadType == LOAD_NORMAL ||
