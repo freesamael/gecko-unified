@@ -1049,9 +1049,12 @@ function _loadURIWithFlags(browser, uri, params) {
   let newFrameloader = false;
   if (browser.getAttribute("isPreloadBrowser") == "true" && uri != "about:newtab") {
     // Leaving about:newtab from a used to be preloaded browser should run the process
-    // selecting algorithm again.
-    mustChangeProcess = true;
-    newFrameloader = true;
+    // selecting algorithm again, unless it's a javascript: URI which should have
+    // side effects on current page.
+    if (!uri.startsWith("javascript:")) {
+      mustChangeProcess = true;
+      newFrameloader = true;
+    }
     browser.removeAttribute("isPreloadBrowser");
   }
 

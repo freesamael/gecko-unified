@@ -241,7 +241,9 @@ this.E10SUtils = {
         this.getRemoteTypeForURIObject(aURI, true, remoteType, webNav.currentURI);
     }
 
-    if (sessionHistory.count == 1 && webNav.currentURI.spec == "about:newtab") {
+    if (sessionHistory.count == 1 &&
+        webNav.currentURI.spec == "about:newtab" &&
+        aURI.scheme != "javascript") {
       // This is possibly a preloaded browser and we're about to navigate away for
       // the first time. On the child side there is no way to tell for sure if that
       // is the case, so let's redirect this request to the parent to decide if a new
