@@ -692,6 +692,16 @@ nsJSChannel::EvaluateScript()
     // script returns it).
 
     if (NS_SUCCEEDED(mStatus)) {
+        nsCOMPtr<nsILoadInfo> loadInfo;
+        mStreamChannel->GetLoadInfo(getter_AddRefs(loadInfo));
+        if (loadInfo) {
+            // Set the channel's resultPrincipalURI to the active document's URI.
+            nsCOMPtr<nsIURI> docURI = mOriginalInnerWindow->GetDocumentURI();
+            if (docURI) {
+                loadInfo->SetResultPrincipalURI(docURI);
+            }
+        }
+
         nsresult rv = mIOThunk->EvaluateScript(mStreamChannel, mPopupState,
                                                mExecutionPolicy,
                                                mOriginalInnerWindow);
