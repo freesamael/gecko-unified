@@ -21,6 +21,10 @@ class nsISHistory;
 class nsIWeakReference;
 class nsPIDOMWindowInner;
 
+namespace mozilla {
+class TimeStamp;
+} // namespace mozilla
+
 // Script "History" object
 class nsHistory final : public nsIDOMHistory, // Empty, needed for extension
                                                   // backwards compat
@@ -57,6 +61,7 @@ protected:
 
   nsIDocShell* GetDocShell() const;
 
+  bool PushOrReplaceStateAllowed();
   void PushOrReplaceState(JSContext* aCx, JS::Handle<JS::Value> aData,
                           const nsAString& aTitle, const nsAString& aUrl,
                           mozilla::ErrorResult& aRv, bool aReplace);
@@ -64,6 +69,11 @@ protected:
   already_AddRefed<nsISHistory> GetSessionHistory() const;
 
   nsCOMPtr<nsIWeakReference> mInnerWindow;
+
+  // Used to control the rate limit of push / replaceState.
+  mozilla::TimeStamp mAddStateThrottleTimeSpanStart;
+  int32_t mAddStateCount;
+  int32_t mAddStateLimit;
 };
 
 #endif /* nsHistory_h___ */

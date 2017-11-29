@@ -21,9 +21,12 @@
 #include "nsISHistory.h"
 #include "nsISHistoryInternal.h"
 #include "mozilla/Preferences.h"
+#include "mozilla/TimeStamp.h"
 
 using namespace mozilla;
 using namespace mozilla::dom;
+
+#define ADD_STATE_THROTTLE_TIME_SPAN_SEC 10
 
 //
 //  History class implementation
@@ -39,6 +42,8 @@ NS_INTERFACE_MAP_END
 
 nsHistory::nsHistory(nsPIDOMWindowInner* aInnerWindow)
   : mInnerWindow(do_GetWeakReference(aInnerWindow))
+  , mAddStateCount(0)
+  , mAddStateLimit(0)
 {
 }
 
@@ -280,6 +285,31 @@ nsHistory::ReplaceState(JSContext* aCx, JS::Handle<JS::Value> aData,
   PushOrReplaceState(aCx, aData, aTitle, aUrl, aRv, true);
 }
 
+bool
+nsHistory::PushOrReplaceStateAllowed() {
+  // Allow up to `nsISHistory.maxLength` (which defaults to 50) pushState /
+  // replaceState in 10 seconds time span.
+
+  TimeStamp now = TimeStamp::Now();
+  if (mAddStateThrottleTimeSpanStart.IsNull() ||
+      (now - mAddStateThrottleTimeSpanStart) >
+      TimeDuration::FromSeconds(ADD_STATE_THROTTLE_TIME_SPAN_SEC)) {
+    mAddStateThrottleTimeSpanStart = now;
+    mAddStateCount = 0;
+  }
+
+  if (mAddStateLimit <= 0) {
+    nsCOMPtr<nsISHistory> shistory = GetSessionHistory();
+    shistory->GetMaxLength(&mAddStateLimit);
+  }
+
+  if (++mAddStateCount > mAddStateLimit) {
+    return false;
+  }
+
+  return true;
+}
+
 void
 nsHistory::PushOrReplaceState(JSContext* aCx, JS::Handle<JS::Value> aData,
                               const nsAString& aTitle, const nsAString& aUrl,
@@ -304,6 +334,14 @@ nsHistory::PushOrReplaceState(JSContext* aCx, JS::Handle<JS::Value> aData,
 
   if (!docShell) {
     aRv.Throw(NS_ERROR_FAILURE);
+
+    return;
+  }
+
+  // Check the threshold to prevent pushState / replaceState flooding.
+  if (!PushOrReplaceStateAllowed()) {
+    aRv.ThrowDOMException(NS_ERROR_DOM_SECURITY_ERR,
+      NS_LITERAL_CSTRING("history.pushState / history.replaceState are called too freqently."));
 
     return;
   }
