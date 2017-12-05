@@ -1168,6 +1168,16 @@ interface nsIDocShell : nsIDocShellTreeItem
   [infallible] readonly attribute boolean awaitingLargeAlloc;
 
   /**
+   * The limit number of addState or hash change allowed in a time span.
+   */
+  [infallible] readonly attribute long addStateOrHashChangeLimit;
+
+  /**
+   * The time span for addStateOrHashChangeLimit in seconds.
+   */
+  [infallible] readonly attribute long addStateOrHashChangeThrottleTimeSpan;
+
+  /**
    * Attribute that determines whether tracking protection is enabled.
    */
   attribute boolean useTrackingProtection;

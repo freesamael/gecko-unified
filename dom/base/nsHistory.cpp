@@ -26,8 +26,6 @@
 using namespace mozilla;
 using namespace mozilla::dom;
 
-#define ADD_STATE_THROTTLE_TIME_SPAN_SEC 10
-
 //
 //  History class implementation
 //
@@ -43,7 +41,6 @@ NS_INTERFACE_MAP_END
 nsHistory::nsHistory(nsPIDOMWindowInner* aInnerWindow)
   : mInnerWindow(do_GetWeakReference(aInnerWindow))
   , mAddStateCount(0)
-  , mAddStateLimit(0)
 {
 }
 
@@ -286,28 +283,27 @@ nsHistory::ReplaceState(JSContext* aCx, JS::Handle<JS::Value> aData,
 }
 
 bool
-nsHistory::PushOrReplaceStateAllowed() {
+nsHistory::ShouldThrottleAddState(nsIDocShell* aDocShell) {
   // Allow up to `nsISHistory.maxLength` (which defaults to 50) pushState /
   // replaceState in 10 seconds time span.
 
+  TimeDuration timeSpan =
+  int32_t limit = aDocShell->GetAddStateOrHashChangeLimit();
+  int32_t timeSpanSec = aDocShell->GetAddStateOrHashChangeThrottleTimeSpan();
+  if (limit <= 0 || timeSpanSec <= 0) {
+    return false;
+  }
+
   TimeStamp now = TimeStamp::Now();
+
   if (mAddStateThrottleTimeSpanStart.IsNull() ||
       (now - mAddStateThrottleTimeSpanStart) >
-      TimeDuration::FromSeconds(ADD_STATE_THROTTLE_TIME_SPAN_SEC)) {
+       TimeDuration::FromSeconds(timeSpanSec)) {
     mAddStateThrottleTimeSpanStart = now;
     mAddStateCount = 0;
   }
 
-  if (mAddStateLimit <= 0) {
-    nsCOMPtr<nsISHistory> shistory = GetSessionHistory();
-    shistory->GetMaxLength(&mAddStateLimit);
-  }
-
-  if (++mAddStateCount > mAddStateLimit) {
-    return false;
-  }
-
-  return true;
+  return (++mAddStateCount > limit);
 }
 
 void
@@ -339,9 +335,9 @@ nsHistory::PushOrReplaceState(JSContext* aCx, JS::Handle<JS::Value> aData,
   }
 
   // Check the threshold to prevent pushState / replaceState flooding.
-  if (!PushOrReplaceStateAllowed()) {
+  if (!ShouldThrottleAddState(docShell)) {
     aRv.ThrowDOMException(NS_ERROR_DOM_SECURITY_ERR,
-      NS_LITERAL_CSTRING("history.pushState / history.replaceState are called too freqently."));
+      NS_LITERAL_CSTRING("history.pushState / history.replaceState are being called too freqently."));
 
     return;
   }

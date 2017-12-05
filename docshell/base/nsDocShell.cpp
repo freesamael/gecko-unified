@@ -260,6 +260,8 @@ using mozilla::dom::workers::ServiceWorkerManager;
 static bool gAddedPreferencesVarCache = false;
 
 bool nsDocShell::sUseErrorPages = false;
+int32_t nsDocShell::sAddStateOrHashChangeLimit = 0;
+int32_t nsDocShell::sAddStateOrHashChangeThrottleTimeSpan = 0;
 
 // Number of documents currently loading
 static int32_t gNumberOfDocumentsLoading = 0;
@@ -5958,6 +5960,12 @@ nsDocShell::Create()
     Preferences::AddBoolVarCache(&sUseErrorPages,
                                  "browser.xul.error_pages.enabled",
                                  mUseErrorPages);
+    Preferences::AddIntVarCache(&sAddStateOrHashChangeLimit,
+                                "dom.navigation.add_state_or_hash_change.limit",
+                                50);
+    Preferences::AddIntVarCache(&sAddStateOrHashChangeThrottleTimeSpan,
+                                "dom.navigation.add_state_or_hash_change.timespan",
+                                10);
     gAddedPreferencesVarCache = true;
   }
 
@@ -15345,6 +15353,22 @@ nsDocShell::GetAwaitingLargeAlloc(bool* aResult)
     return NS_OK;
   }
   *aResult = static_cast<TabChild*>(tabChild.get())->IsAwaitingLargeAlloc();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDocShell::GetAddStateOrHashChangeLimit(int32_t* aResult)
+{
+  MOZ_ASSERT(aResult);
+  *aResult = sAddStateOrHashChangeLimit;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDocShell::GetAddStateOrHashChangeThrottleTimeSpan(int32_t* aResult)
+{
+  MOZ_ASSERT(aResult);
+  *aResult = sAddStateOrHashChangeThrottleTimeSpan;
   return NS_OK;
 }
 

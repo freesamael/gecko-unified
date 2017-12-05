@@ -1052,6 +1052,16 @@ protected:
   // Cached value of the "browser.xul.error_pages.enabled" preference.
   static bool sUseErrorPages;
 
+  // Cached value of the "dom.navigation.add_state_or_hash_change.limit"
+  // preference, which controls the limit of addState or hash change in a
+  // time span.
+  static int32_t sAddStateOrHashChangeLimit;
+
+  // Cached value of the "dom.navigation.add_state_or_hash_change.timespan"
+  // preference, which is the time span for sAddStateOrHashChangeLimit, in
+  // seconds.
+  static int32_t sAddStateOrHashChangeThrottleTimeSpan;
+
   bool mCreated : 1;
   bool mAllowSubframes : 1;
   bool mAllowPlugins : 1;

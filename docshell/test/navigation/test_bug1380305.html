@@ -14,15 +14,15 @@ https://bugzilla.mozilla.org/show_bug.cgi?id=1380305
   SimpleTest.waitForExplicitFinish();
 
   function test() {
-    let webNav = SpecialPowers.wrap(window.top)
-                 .QueryInterface(SpecialPowers.Ci.nsIInterfaceRequestor)
-                 .getInterface(SpecialPowers.Ci.nsIWebNavigation);
-    let maxLength = webNav.sessionHistory.maxLength;
-    ok(maxLength > 0, "sanity check of maxLength");
+    // let webNav = SpecialPowers.wrap(window.top)
+    //              .QueryInterface(SpecialPowers.Ci.nsIInterfaceRequestor)
+    //              .getInterface(SpecialPowers.Ci.nsIWebNavigation);
+    // let maxLength = 100;
+    // ok(maxLength > 0, "sanity check of maxLength");
 
     // Push maxLength states in a short time.
     let ref = "ref";
-    for (let i = 0; i < maxLength; i++) {
+    for (let i = 0; i < 100; i++) {
       history.pushState(null, "test", location.href + "#" + ref);
       ref += i;
     }

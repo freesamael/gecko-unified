@@ -27,8 +27,8 @@ class TimeStamp;
 
 // Script "History" object
 class nsHistory final : public nsIDOMHistory, // Empty, needed for extension
-                                                  // backwards compat
-                            public nsWrapperCache
+                                              // backwards compat
+                        public nsWrapperCache
 {
 public:
   NS_DECL_CYCLE_COLLECTING_ISUPPORTS
@@ -61,7 +61,9 @@ protected:
 
   nsIDocShell* GetDocShell() const;
 
-  bool PushOrReplaceStateAllowed();
+  // Returns true if there has been too many calls to pushState / replaceState
+  // in a short time frame, and we should throttle subsequent calls.
+  bool ShouldThrottleAddState(nsIDocShell* aDocShell);
   void PushOrReplaceState(JSContext* aCx, JS::Handle<JS::Value> aData,
                           const nsAString& aTitle, const nsAString& aUrl,
                           mozilla::ErrorResult& aRv, bool aReplace);
@@ -73,7 +75,6 @@ protected:
   // Used to control the rate limit of push / replaceState.
   mozilla::TimeStamp mAddStateThrottleTimeSpanStart;
   int32_t mAddStateCount;
-  int32_t mAddStateLimit;
 };
 
 #endif /* nsHistory_h___ */
