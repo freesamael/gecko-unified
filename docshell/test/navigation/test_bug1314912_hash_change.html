@@ -1,0 +1,62 @@
+<!DOCTYPE HTML>
+<html>
+<!--
+https://bugzilla.mozilla.org/show_bug.cgi?id=1314912
+-->
+<head>
+  <meta charset="utf-8">
+  <title>Test for Bug 1314912</title>
+  <script type="application/javascript" src="/tests/SimpleTest/SimpleTest.js"></script>
+  <link rel="stylesheet" type="text/css" href="/tests/SimpleTest/test.css"/>
+  <script type="application/javascript">
+
+  /** Test for Bug 1314912 **/
+  SimpleTest.waitForExplicitFinish();
+
+  async function setup() {
+    await SpecialPowers.pushPrefEnv({set: [
+      ["dom.navigation.same_doc.limit", 100],
+      ["dom.navigation.same_doc.limit.timespan", 3]]});
+  }
+
+  let hasSetup = false;
+  let hasRepeated = false;
+  async function test() {
+    if (!hasSetup) {
+      await setup();
+      hasSetup = true;
+    }
+
+    // Change hash 100 times in a short time.
+    let ref = "ref";
+    for (let i = 0; i < 100; i++) {
+      location.hash = ref;
+      ref += i;
+    }
+
+    // The next hash change should throw.
+    SimpleTest.doesThrow(
+      () => location.hash = ref,
+      "check setting location.hash does throw");
+
+    if (hasRepeated) {
+      // Repeat the test again after 5 seconds.
+      setTimeout(test, 5000);
+      hasRepeated = true;
+    } else {
+      SimpleTest.finish();
+    }
+  }
+
+  </script>
+</head>
+<body onload="setTimeout(test, 0);">
+<a target="_blank" href="https://bugzilla.mozilla.org/show_bug.cgi?id=1314912">Mozilla Bug 1314912</a>
+<p id="display"></p>
+<div id="content" style="display: none">
+
+</div>
+<pre id="test">
+</pre>
+</body>
+</html>
