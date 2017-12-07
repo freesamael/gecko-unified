@@ -1939,7 +1939,7 @@ nsSHistory::LoadDifferingEntries(nsISHEntry* aPrevEntry, nsISHEntry* aNextEntry,
     // Finally recursively call this method.
     // This will either load a new page to shell or some subshell or
     // do nothing.
-    LoadDifferingEntries(pChild, nChild, dsChild, aLoadType, aDifferenceFound);
+    result = LoadDifferingEntries(pChild, nChild, dsChild, aLoadType, aDifferenceFound);
   }
   return result;
 }

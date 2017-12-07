@@ -260,6 +260,8 @@ using mozilla::dom::workers::ServiceWorkerManager;
 static bool gAddedPreferencesVarCache = false;
 
 bool nsDocShell::sUseErrorPages = false;
+int32_t nsDocShell::sSameDocNavLimit = 0;
+int32_t nsDocShell::sSameDocNavThrottleSpan = 0;
 
 // Number of documents currently loading
 static int32_t gNumberOfDocumentsLoading = 0;
@@ -793,6 +795,7 @@ nsDocShell::nsDocShell()
   , mSandboxFlags(0)
   , mOrientationLock(eScreenOrientation_None)
   , mFullscreenAllowed(CHECK_ATTRIBUTES)
+  , mSameDocLocChangeCount(0)
   , mCreated(false)
   , mAllowSubframes(true)
   , mAllowPlugins(true)
@@ -1825,6 +1828,59 @@ nsDocShell::DispatchLocationChangeEvent()
                       &nsDocShell::FireDummyOnLocationChange));
 }
 
+void
+nsDocShell::RecordAndFireOnLocationChange(nsIWebProgress* aWebProgress,
+                                          nsIRequest* aRequest,
+                                          nsIURI *aUri,
+                                          uint32_t aFlags)
+{
+  if (aFlags & LOCATION_CHANGE_SAME_DOCUMENT) {
+    // We're only interested in LOCATION_CHANGE_SAME_DOCUMENT caused by content
+    // scripts.
+    nsCOMPtr<nsIGlobalObject> incumbent = GetIncumbentGlobal();
+    nsIPrincipal* callerPrincipal;
+    if (incumbent &&
+        (callerPrincipal = incumbent->PrincipalOrNull()) &&
+        !nsContentUtils::IsSystemPrincipal(callerPrincipal)) {
+      if (mSameDocLocChangeCount == 0) {
+        mSameDocNavThrottleSpanStart = TimeStamp::Now();
+      }
+      mSameDocLocChangeCount++;
+    }
+  } else {
+    mSameDocLocChangeCount = 0;
+  }
+
+  FireOnLocationChange(aWebProgress, aRequest, aUri, aFlags);
+}
+
+bool
+nsDocShell::ShouldThrottleSameDocNav()
+{
+  // Only throttle on content scripts.
+  nsCOMPtr<nsIGlobalObject> incumbent = GetIncumbentGlobal();
+  if (!incumbent ||
+      nsContentUtils::IsSystemPrincipal(incumbent->PrincipalOrNull())) {
+    return false;
+  }
+
+  // If either of the preferences is set to non-positive value then disable
+  // throttling.
+  if (sSameDocNavLimit <= 0 || sSameDocNavThrottleSpan <= 0) {
+    return false;
+  }
+
+  TimeDuration throttleSpan =
+    TimeDuration::FromSeconds(sSameDocNavThrottleSpan);
+  if (mSameDocNavThrottleSpanStart.IsNull() ||
+      (TimeStamp::Now() - mSameDocNavThrottleSpanStart > throttleSpan)) {
+    mSameDocLocChangeCount = 0;
+    return false;
+  }
+
+  return mSameDocLocChangeCount >= sSameDocNavLimit;
+}
+
 bool
 nsDocShell::MaybeInitTiming()
 {
@@ -2074,7 +2130,7 @@ nsDocShell::SetCurrentURI(nsIURI* aURI, nsIRequest* aRequest,
   }
 
   if (aFireOnLocationChange) {
-    FireOnLocationChange(this, aRequest, aURI, aLocationFlags);
+    RecordAndFireOnLocationChange(this, aRequest, aURI, aLocationFlags);
   }
   return !aFireOnLocationChange;
 }
@@ -5958,6 +6014,12 @@ nsDocShell::Create()
     Preferences::AddBoolVarCache(&sUseErrorPages,
                                  "browser.xul.error_pages.enabled",
                                  mUseErrorPages);
+    Preferences::AddIntVarCache(&sSameDocNavLimit,
+                                "dom.navigation.same_doc.limit",
+                                100);
+    Preferences::AddIntVarCache(&sSameDocNavThrottleSpan,
+                                "dom.navigation.same_doc.limit.timespan",
+                                10);
     gAddedPreferencesVarCache = true;
   }
 
@@ -9405,8 +9467,8 @@ nsDocShell::CreateContentViewer(const nsACString& aContentType,
         nullptr, mLoadType, false, false, false);
 
       if (errorOnLocationChangeNeeded) {
-        FireOnLocationChange(this, failedChannel, failedURI,
-                             LOCATION_CHANGE_ERROR_PAGE);
+        RecordAndFireOnLocationChange(this, failedChannel, failedURI,
+                                      LOCATION_CHANGE_ERROR_PAGE);
       }
     }
 
@@ -9499,7 +9561,7 @@ nsDocShell::CreateContentViewer(const nsACString& aContentType,
   }
 
   if (onLocationChangeNeeded) {
-    FireOnLocationChange(this, aRequest, mCurrentURI, 0);
+    RecordAndFireOnLocationChange(this, aRequest, mCurrentURI, 0);
   }
 
   return NS_OK;
@@ -10572,6 +10634,15 @@ nsDocShell::InternalLoad(nsIURI* aURI,
        sameExceptHashes && newURIHasRef);
 
     if (doShortCircuitedLoad) {
+      if (ShouldThrottleSameDocNav()) {
+        nsContentUtils::ReportToConsole(nsIScriptError::exceptionFlag,
+                                        NS_LITERAL_CSTRING("DOM"),
+                                        GetDocument(),
+                                        nsContentUtils::eDOM_PROPERTIES,
+                                        "LocChangeFloodingPrevented");
+        return NS_ERROR_DOM_SECURITY_ERR;
+      }
+
       // Save the position of the scrollers.
       nscoord cx = 0, cy = 0;
       GetCurScrollPos(ScrollOrientation_X, &cx);
@@ -12324,6 +12395,15 @@ nsDocShell::AddState(JS::Handle<JS::Value> aData, const nsAString& aTitle,
 
   nsCOMPtr<nsIDocument> document = GetDocument();
   NS_ENSURE_TRUE(document, NS_ERROR_FAILURE);
+
+  if (ShouldThrottleSameDocNav()) {
+    nsContentUtils::ReportToConsole(nsIScriptError::exceptionFlag,
+                                    NS_LITERAL_CSTRING("DOM"),
+                                    document,
+                                    nsContentUtils::eDOM_PROPERTIES,
+                                    "LocChangeFloodingPrevented");
+    return NS_ERROR_DOM_SECURITY_ERR;
+  }
 
   // Step 1: Serialize aData using structured clone.
   nsCOMPtr<nsIStructuredCloneContainer> scContainer;

@@ -214,8 +214,12 @@ nsHistory::Go(int32_t aDelta, ErrorResult& aRv)
   session_history->GetGlobalCount(&len);
 
   int32_t index = curIndex + aDelta;
-  if (index > -1 && index < len)
-    webnav->GotoIndex(index);
+  if (index > -1 && index < len) {
+    nsresult rv = webnav->GotoIndex(index);
+    if (rv == NS_ERROR_DOM_SECURITY_ERR) {
+      aRv.Throw(NS_ERROR_DOM_SECURITY_ERR);
+    }
+  }
 
   // Ignore the return value from GotoIndex(), since returning errors
   // from GotoIndex() can lead to exceptions and a possible leak
@@ -240,7 +244,10 @@ nsHistory::Back(ErrorResult& aRv)
     return;
   }
 
-  webNav->GoBack();
+  nsresult rv = webNav->GoBack();
+  if (rv == NS_ERROR_DOM_SECURITY_ERR) {
+    aRv.Throw(NS_ERROR_DOM_SECURITY_ERR);
+  }
 }
 
 void
@@ -261,7 +268,10 @@ nsHistory::Forward(ErrorResult& aRv)
     return;
   }
 
-  webNav->GoForward();
+  nsresult rv = webNav->GoForward();
+  if (rv == NS_ERROR_DOM_SECURITY_ERR) {
+    aRv.Throw(NS_ERROR_DOM_SECURITY_ERR);
+  }
 }
 
 void

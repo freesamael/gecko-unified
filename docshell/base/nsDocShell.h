@@ -273,8 +273,8 @@ public:
   // updating security info.
   void FireDummyOnLocationChange()
   {
-    FireOnLocationChange(this, nullptr, mCurrentURI,
-                         LOCATION_CHANGE_SAME_DOCUMENT);
+    RecordAndFireOnLocationChange(this, nullptr, mCurrentURI,
+                                 LOCATION_CHANGE_SAME_DOCUMENT);
   }
 
   nsresult HistoryTransactionRemoved(int32_t aIndex);
@@ -1049,8 +1049,22 @@ protected:
   };
   FullscreenAllowedState mFullscreenAllowed;
 
+  // The number of successive LOCATION_CHANGE_SAME_DOCUMENT caused by content
+  // scripts since mSameDocNavThrottleSpanStart.
+  int32_t mSameDocLocChangeCount;
+  mozilla::TimeStamp mSameDocNavThrottleSpanStart;
+
   // Cached value of the "browser.xul.error_pages.enabled" preference.
   static bool sUseErrorPages;
+
+  // Cached value of the "dom.navigation.same_doc.limit" preference, which
+  // controls the limit of same document navigation caused by content scripts in
+  // a time span.
+  static int32_t sSameDocNavLimit;
+
+  // Cached value of the "dom.navigation.same_doc.limit.timespan" preference,
+  // which is the time span for sSameDocNavLimit in seconds.
+  static int32_t sSameDocNavThrottleSpan;
 
   bool mCreated : 1;
   bool mAllowSubframes : 1;
@@ -1214,6 +1228,21 @@ private:
   // Dispatch a runnable to the TabGroup associated to this docshell.
   nsresult DispatchToTabGroup(mozilla::TaskCategory aCategory,
                               already_AddRefed<nsIRunnable>&& aRunnable);
+
+  // Record the number of successive LOCATION_CHANGE_SAME_DOCUMENT and
+  // fire the location change event through nsDocLoader.
+  //
+  // We don't want to make nsDocLoader::FireOnLocationChange be virtual and
+  // override it, since nsDocLoader would propagate the call to all parents'
+  // FireOnLocationChange but we only want to record it on the source docshell.
+  void RecordAndFireOnLocationChange(nsIWebProgress* aWebProgress,
+                                     nsIRequest* aRequest,
+                                     nsIURI *aUri,
+                                     uint32_t aFlags);
+
+  // Check if we should throttle same document navigation based on the number
+  // of successive LOCATION_CHANGE_SAME_DOCUMENT caused by content scripts.
+  bool ShouldThrottleSameDocNav();
 
 #ifdef DEBUG
   // We're counting the number of |nsDocShells| to help find leaks
